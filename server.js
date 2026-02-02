@@ -12,6 +12,9 @@ const contactRoutes = require('./routes/contact');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - required for Render (fixes express-rate-limit warning)
+app.set('trust proxy', 1);
+
 // Middleware - CORS: Allow frontend (Netlify + localhost)
 const allowedOrigins = [
     'http://localhost:3000',
@@ -32,8 +35,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/infivion')
+// MongoDB Connection - longer timeout for Render + Atlas
+const mongoOptions = {
+    serverSelectionTimeoutMS: 30000,
+    connectTimeoutMS: 30000
+};
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/infivion', mongoOptions)
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 

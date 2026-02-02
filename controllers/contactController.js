@@ -11,11 +11,14 @@ const Contact = require('../models/Contact');
 
 // Email Transporter Configuration
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // IMPORTANT - required on Render
     auth: {
         user: process.env.CONTACT_MAIL_USER,
         pass: process.env.CONTACT_MAIL_PASS
-    }
+    },
+    connectionTimeout: 20000
 });
 
 // Verify transporter connection
