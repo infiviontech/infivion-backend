@@ -35,14 +35,25 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection - longer timeout for Render + Atlas
+// MongoDB Connection - NO localhost fallback (Render has no local MongoDB)
+const mongoURI = process.env.MONGODB_URI;
+
+if (!mongoURI) {
+    console.error('❌ MONGODB_URI is missing. Add it in Render → Environment.');
+    process.exit(1);
+}
+
 const mongoOptions = {
     serverSelectionTimeoutMS: 30000,
     connectTimeoutMS: 30000
 };
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/infivion', mongoOptions)
+
+mongoose.connect(mongoURI, mongoOptions)
     .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    .catch(err => {
+        console.error('❌ MongoDB connection failed:', err.message);
+        process.exit(1);
+    });
 
 // Routes
 app.use('/api/contact', contactRoutes);
