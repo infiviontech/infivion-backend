@@ -4,31 +4,12 @@
  */
 
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const validator = require('validator');
 const Otp = require('../models/Otp');
 const Contact = require('../models/Contact');
 
-// Email Transporter Configuration
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // IMPORTANT - required on Render
-    auth: {
-        user: process.env.CONTACT_MAIL_USER,
-        pass: process.env.CONTACT_MAIL_PASS
-    },
-    connectionTimeout: 20000
-});
-
-// Verify transporter connection
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email transporter error:', error);
-    } else {
-        console.log('✅ Email transporter ready');
-    }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Generate 6-digit OTP
@@ -54,12 +35,12 @@ function generateMessageId() {
 }
 
 /**
- * Send OTP Email to User
+ * Send OTP Email to User (Resend - no SMTP, works on Render)
  */
 async function sendOtpEmail(email, otp, name) {
-    const mailOptions = {
-        from: `"Infivion Technologies" <${process.env.CONTACT_MAIL_USER}>`,
-        to: email,
+    const { data, error } = await resend.emails.send({
+        from: 'Infivion Technologies <onboarding@resend.dev>',
+        to: [email],
         subject: 'Your OTP for Infivion Technologies Contact Form',
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -89,22 +70,23 @@ async function sendOtpEmail(email, otp, name) {
                 </p>
             </div>
         `
-    };
-    
-    return transporter.sendMail(mailOptions);
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 /**
- * Send Contact Form Email to Company
+ * Send Contact Form Email to Company (Resend)
  */
 async function sendContactEmail(contactData) {
     const userTypeLabel = contactData.userType === 'student' ? 'Student' : 'Company / Organization';
     const affiliationLabel = contactData.userType === 'student' ? 'Institution' : 'Organization';
     const affiliationValue = contactData.userType === 'student' ? contactData.institution : contactData.organization;
     
-    const mailOptions = {
-        from: `"Infivion Contact Form" <${process.env.CONTACT_MAIL_USER}>`,
-        to: 'infiviontech@gmail.com',
+    const { data, error } = await resend.emails.send({
+        from: 'Infivion Contact Form <onboarding@resend.dev>',
+        to: ['infiviontech@gmail.com'],
         subject: `[${contactData.messageId}] New Contact from ${contactData.fullName}`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -165,9 +147,10 @@ async function sendContactEmail(contactData) {
                 </p>
             </div>
         `
-    };
-    
-    return transporter.sendMail(mailOptions);
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 /**
